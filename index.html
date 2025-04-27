@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mastering the Chat</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .chat-container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        #chat-messages {
+            height: 300px;
+            overflow-y: auto;
+            padding: 15px;
+            background-color: #f9f9f9;
+        }
+        .message {
+            margin-bottom: 10px;
+            padding: 8px 12px;
+            border-radius: 15px;
+            max-width: 80%;
+        }
+        .user-message {
+            background-color: #0084ff;
+            color: white;
+            margin-left: auto;
+        }
+        .assistant-message {
+            background-color: #e5e5ea;
+            color: black;
+        }
+        .system-message {
+            background-color: #ffcc00;
+            color: black;
+            text-align: center;
+            margin: 0 auto;
+        }
+        #chat-form {
+            display: flex;
+            padding: 10px;
+            border-top: 1px solid #eee;
+        }
+        #user-input {
+            flex-grow: 1;
+            border: 1px solid #ddd;
+            border-radius: 20px;
+            padding: 8px 15px;
+            margin-right: 10px;
+        }
+        button {
+            background-color: #0084ff;
+            color: white;
+            border: none;
+            border-radius: 20px;
+            padding: 8px 15px;
+            cursor: pointer;
+        }
+        #video-container {
+            margin-top: 20px;
+            text-align: center;
+        }
+        #api-key-form {
+            margin-bottom: 20px;
+            padding: 15px;
+            background-color: #f0f0f0;
+            border-radius: 8px;
+        }
+        #api-key-input {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="chat-container">
+        <div id="api-key-form">
+            <h3>Enter your API Key to start</h3>
+            <p>Your API key is stored only in your browser and is never sent to any server except OpenAI.</p>
+            <input type="password" id="api-key-input" placeholder="Enter your OpenAI API key">
+            <button id="save-key-button">Save Key</button>
+        </div>
+        
+        <div id="chat-interface" style="display: none;">
+            <div id="chat-messages"></div>
+            <form id="chat-form">
+                <input type="text" id="user-input" placeholder="Type your message...">
+                <button type="submit">Send</button>
+            </form>
+            <div id="video-container"></div>
+        </div>
+    </div>
+
+    <script>
+    // DOM elements
+    const apiKeyForm = document.getElementById('api-key-form');
+    const apiKeyInput = document.getElementById('api-key-input');
+    const saveKeyButton = document.getElementById('save-key-button');
+    const chatInterface = document.getElementById('chat-interface');
+    const chatForm = document.getElementById('chat-form');
+    const userInput = document.getElementById('user-input');
+    const messagesContainer = document.getElementById('chat-messages');
+    const videoContainer = document.getElementById('video-container');
+    
+    // Check for saved API key
+    const savedApiKey = localStorage.getItem('openai_api_key');
+    if (savedApiKey) {
+        apiKeyForm.style.display = 'none';
+        chatInterface.style.display = 'block';
+        addMessage('assistant', 'Welcome to Mastering the Chat! How can I help you today?');
+    }
+    
+    // Save API key
+    saveKeyButton.addEventListener('click', () => {
+        const apiKey = apiKeyInput.value.trim();
+        if (apiKey) {
+            localStorage.setItem('openai_api_key', apiKey);
+            apiKeyForm.style.display = 'none';
+            chatInterface.style.display = 'block';
+            addMessage('assistant', 'Welcome to Mastering the Chat! How can I help you today?');
+        } else {
+            alert('Please enter a valid API key');
+        }
+    });
+    
+    // Handle chat form submission
+    chatForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const message = userInput.value.trim();
+        if (!message) return;
+        
+        // Display user message
+        addMessage('user', message);
+        userInput.value = '';
+        
+        try {
+            const apiKey = localStorage.getItem('openai_api_key');
+            if (!apiKey) {
+                throw new Error('API key not found');
+            }
+            
+            // Call OpenAI API directly
+            const response = await fetch('https://api.openai.com/v1/chat/completions', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${apiKey}`
+                },
+                body: JSON.stringify({
+                    model: 'gpt-3.5-turbo',
+                    messages: [{ role: 'user', content: message }],
+                    max_tokens: 500
+                })
+            });
+            
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error?.message || 'Error calling OpenAI API');
+            }
+            
+            const data = await response.json();
+            const aiResponse = data.choices[0].message.content;
+            
+            // Display ChatGPT response
+            addMessage('assistant', aiResponse);
+            
+        } catch (error) {
+            console.error('Error:', error);
+            addMessage('system', `Error: ${error.message}`);
+        }
+    });
+
+    // Add a message to the chat
+    function addMessage(sender, text) {
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `message ${sender}-message`;
+        messageDiv.textContent = text;
+        messagesContainer.appendChild(messageDiv);
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
+    </script>
+</body>
+</html>
