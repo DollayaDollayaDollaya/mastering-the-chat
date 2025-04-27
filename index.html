@@ -1,389 +1,128 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mastering the Chat with Video Feedback</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 20px;
-            background-color: #f5f5f5;
-        }
-        .chat-container {
-            max-width: 800px;
-            margin: 0 auto;
-            background-color: white;
-            border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            overflow: hidden;
-        }
-        #chat-messages {
-            height: 300px;
-            overflow-y: auto;
-            padding: 15px;
-            background-color: #f9f9f9;
-        }
-        .message {
-            margin-bottom: 10px;
-            padding: 8px 12px;
-            border-radius: 15px;
-            max-width: 80%;
-        }
-        .user-message {
-            background-color: #0084ff;
-            color: white;
-            margin-left: auto;
-        }
-        .assistant-message {
-            background-color: #e5e5ea;
-            color: black;
-        }
-        .system-message {
-            background-color: #ffcc00;
-            color: black;
-            text-align: center;
-            margin: 0 auto;
-        }
-        #chat-form {
-            display: flex;
-            padding: 10px;
-            border-top: 1px solid #eee;
-        }
-        #user-input {
-            flex-grow: 1;
-            border: 1px solid #ddd;
-            border-radius: 20px;
-            padding: 8px 15px;
-            margin-right: 10px;
-        }
-        button {
-            background-color: #0084ff;
-            color: white;
-            border: none;
-            border-radius: 20px;
-            padding: 8px 15px;
-            cursor: pointer;
-        }
-        #video-container {
-            margin-top: 20px;
-            padding: 15px;
-            text-align: center;
-        }
-        #api-key-form {
-            margin-bottom: 20px;
-            padding: 15px;
-            background-color: #f0f0f0;
-            border-radius: 8px;
-        }
-        .api-key-input {
-            width: 100%;
-            padding: 8px;
-            margin-bottom: 10px;
-        }
-        #video-button {
-            margin-top: 10px;
-            background-color: #9c27b0;
-        }
-        .loading {
-            display: inline-block;
-            width: 20px;
-            height: 20px;
-            border: 3px solid rgba(255,255,255,.3);
-            border-radius: 50%;
-            border-top-color: #fff;
-            animation: spin 1s ease-in-out infinite;
-            margin-right: 10px;
-        }
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-    </style>
-</head>
-<body>
-    <div class="chat-container">
-        <div id="api-key-form">
-            <h3>Enter your API Keys to start</h3>
-            <p>Your API keys are stored only in your browser and are never sent to any server except the respective APIs.</p>
-            
-            <label for="openai-api-key">OpenAI API Key:</label>
-            <input type="password" id="openai-api-key" class="api-key-input" placeholder="Enter your OpenAI API key">
-            
-            <label for="heygen-api-key">HeyGen API Key:</label>
-            <input type="password" id="heygen-api-key" class="api-key-input" placeholder="Enter your HeyGen API key">
-            
-            <label for="avatar-id">HeyGen Avatar ID:</label>
-            <input type="text" id="avatar-id" class="api-key-input" placeholder="Enter your HeyGen Avatar ID">
-            
-            <button id="save-keys-button">Save Keys</button>
-        </div>
+// Handle video generation button
+videoButton.addEventListener('click', async () => {
+    try {
+        const heygenKey = localStorage.getItem('heygen_api_key');
+        const avatarId = localStorage.getItem('heygen_avatar_id');
         
-        <div id="chat-interface" style="display: none;">
-            <div id="chat-messages"></div>
-            <form id="chat-form">
-                <input type="text" id="user-input" placeholder="Type your message...">
-                <button type="submit">Send</button>
-            </form>
-            <div id="video-container">
-                <button id="video-button" style="display: none;">Generate Video Explanation</button>
-            </div>
-        </div>
-    </div>
-
-    <script>
-    // DOM elements
-    const apiKeyForm = document.getElementById('api-key-form');
-    const openaiApiKeyInput = document.getElementById('openai-api-key');
-    const heygenApiKeyInput = document.getElementById('heygen-api-key');
-    const avatarIdInput = document.getElementById('avatar-id');
-    const saveKeysButton = document.getElementById('save-keys-button');
-    const chatInterface = document.getElementById('chat-interface');
-    const chatForm = document.getElementById('chat-form');
-    const userInput = document.getElementById('user-input');
-    const messagesContainer = document.getElementById('chat-messages');
-    const videoContainer = document.getElementById('video-container');
-    const videoButton = document.getElementById('video-button');
-    
-    let lastAiResponse = '';
-    
-    // Check for saved API keys
-    const savedOpenAiKey = localStorage.getItem('openai_api_key');
-    const savedHeygenKey = localStorage.getItem('heygen_api_key');
-    const savedAvatarId = localStorage.getItem('heygen_avatar_id');
-    
-    if (savedOpenAiKey && savedHeygenKey && savedAvatarId) {
-        openaiApiKeyInput.value = savedOpenAiKey;
-        heygenApiKeyInput.value = savedHeygenKey;
-        avatarIdInput.value = savedAvatarId;
-        apiKeyForm.style.display = 'none';
-        chatInterface.style.display = 'block';
-        addMessage('assistant', 'Welcome to Mastering the Chat! How can I help you today?');
-    }
-    
-    // Save API keys
-    saveKeysButton.addEventListener('click', () => {
-        const openaiKey = openaiApiKeyInput.value.trim();
-        const heygenKey = heygenApiKeyInput.value.trim();
-        const avatarId = avatarIdInput.value.trim();
-        
-        if (openaiKey && heygenKey && avatarId) {
-            localStorage.setItem('openai_api_key', openaiKey);
-            localStorage.setItem('heygen_api_key', heygenKey);
-            localStorage.setItem('heygen_avatar_id', avatarId);
-            apiKeyForm.style.display = 'none';
-            chatInterface.style.display = 'block';
-            addMessage('assistant', 'Welcome to Mastering the Chat! How can I help you today?');
-        } else {
-            alert('Please enter all required API keys and Avatar ID');
+        if (!heygenKey || !avatarId) {
+            throw new Error('HeyGen credentials not found');
         }
-    });
-    
-    // Handle chat form submission
-    chatForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
         
-        const message = userInput.value.trim();
-        if (!message) return;
+        // Show loading state
+        videoButton.innerHTML = '<span class="loading"></span>Generating video...';
+        videoButton.disabled = true;
         
-        // Display user message
-        addMessage('user', message);
-        userInput.value = '';
-        
-        try {
-            const apiKey = localStorage.getItem('openai_api_key');
-            if (!apiKey) {
-                throw new Error('OpenAI API key not found');
-            }
-            
-            // Call OpenAI API directly
-            const response = await fetch('https://api.openai.com/v1/chat/completions', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${apiKey}`
-                },
-                body: JSON.stringify({
-                    model: 'gpt-3.5-turbo',
-                    messages: [{ role: 'user', content: message }],
-                    max_tokens: 500
-                })
-            });
-            
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.error?.message || 'Error calling OpenAI API');
-            }
-            
-            const data = await response.json();
-            const aiResponse = data.choices[0].message.content;
-            lastAiResponse = aiResponse;
-            
-            // Display ChatGPT response
-            addMessage('assistant', aiResponse);
-            
-            // Show video button if it's a question that might benefit from video explanation
-            if (isVideoWorthy(message, aiResponse)) {
-                videoButton.style.display = 'block';
-            }
-            
-        } catch (error) {
-            console.error('Error:', error);
-            addMessage('system', `Error: ${error.message}`);
-        }
-    });
-    
-    // Handle video generation button
-    videoButton.addEventListener('click', async () => {
-        try {
-            const heygenKey = localStorage.getItem('heygen_api_key');
-            const avatarId = localStorage.getItem('heygen_avatar_id');
-            
-            if (!heygenKey || !avatarId) {
-                throw new Error('HeyGen credentials not found');
-            }
-            
-            // Show loading state
-            videoButton.innerHTML = '<span class="loading"></span>Generating video...';
-            videoButton.disabled = true;
-            
-            // Call HeyGen API
-            const response = await fetch('https://api.heygen.com/v2/video/generate', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${heygenKey}`
-                },
-                body: JSON.stringify({
-                    avatar_id: avatarId,
-                    script: createVideoScript(lastAiResponse),
-                    voice_id: "en-US-Male", // Default voice, adjust as needed
-                    test: false,
-                    video_settings: {
-                        background: "#FFFFFF",
-                        ratio: "16:9"
-                    }
-                })
-            });
-            
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.error?.message || 'Error generating video');
-            }
-            
-            const data = await response.json();
-            
-            // Check video status and wait for completion
-            if (data.data && data.data.video_id) {
-                const videoId = data.data.video_id;
-                const videoUrl = await checkVideoStatus(videoId, heygenKey);
-                
-                // Display video when ready
-                videoContainer.innerHTML = `
-                    <video controls width="100%" style="max-width: 600px;">
-                        <source src="${videoUrl}" type="video/mp4">
-                        Your browser does not support the video tag.
-                    </video>
-                    <button id="video-button" style="margin-top: 15px;">Generate New Video</button>
-                `;
-                
-                // Re-attach event listener to the new button
-                document.getElementById('video-button').addEventListener('click', () => {
-                    videoButton.click();
-                });
-            } else {
-                throw new Error('Video ID not received from HeyGen');
-            }
-            
-        } catch (error) {
-            console.error('Error generating video:', error);
-            videoButton.disabled = false;
-            videoButton.textContent = 'Try Again';
-            videoContainer.innerHTML += `<p style="color: red;">Error: ${error.message}</p>`;
-        }
-    });
-    
-    // Check video generation status
-    async function checkVideoStatus(videoId, apiKey) {
-        return new Promise((resolve, reject) => {
-            const maxAttempts = 60; // 5 minutes total (checking every 5 seconds)
-            let attempts = 0;
-            
-            const checkStatus = async () => {
-                try {
-                    const response = await fetch(`https://api.heygen.com/v2/video/status?video_id=${videoId}`, {
-                        headers: {
-                            'Authorization': `Bearer ${apiKey}`
+        // Call HeyGen API with the correct format
+        const response = await fetch('https://api.heygen.com/v2/video/generate', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Api-Key': heygenKey  // Changed from Authorization Bearer format
+            },
+            body: JSON.stringify({
+                "video_inputs": [
+                    {
+                        "character": {
+                            "type": "avatar",
+                            "avatar_id": avatarId,
+                            "avatar_style": "normal"
+                        },
+                        "voice": {
+                            "type": "text",
+                            "input_text": createVideoScript(lastAiResponse),
+                            "voice_id": "2d5b0e6cf36f460aa7fc47e3eee4ba54"  // Default voice ID
+                        },
+                        "background": {
+                            "type": "color",
+                            "value": "#f5f5f5"  // Light gray background
                         }
-                    });
-                    
-                    if (!response.ok) {
-                        throw new Error('Failed to check video status');
                     }
-                    
-                    const data = await response.json();
-                    
-                    if (data.data.status === 'COMPLETED') {
-                        resolve(data.data.video_url);
-                    } else if (data.data.status === 'FAILED') {
-                        reject(new Error('Video generation failed'));
-                    } else if (attempts < maxAttempts) {
-                        attempts++;
-                        // Update the button with progress
-                        videoButton.innerHTML = `<span class="loading"></span>Processing video (${attempts}/${maxAttempts})`;
-                        setTimeout(checkStatus, 5000); // Check again in 5 seconds
-                    } else {
-                        reject(new Error('Video generation timed out'));
-                    }
-                } catch (error) {
-                    reject(error);
+                ],
+                "dimension": {
+                    "width": 1280,
+                    "height": 720
                 }
-            };
-            
-            checkStatus();
+            })
         });
-    }
-    
-    // Add a message to the chat
-    function addMessage(sender, text) {
-        const messageDiv = document.createElement('div');
-        messageDiv.className = `message ${sender}-message`;
-        messageDiv.textContent = text;
-        messagesContainer.appendChild(messageDiv);
-        messagesContainer.scrollTop = messagesContainer.scrollHeight;
-    }
-    
-    // Determine if a message is worthy of video explanation
-    function isVideoWorthy(userMessage, aiResponse) {
-        // This is a simplified check - you can make this more sophisticated
-        const questionWords = ['how', 'what', 'why', 'explain', 'tell me about', 'describe'];
-        const userMessageLower = userMessage.toLowerCase();
         
-        return questionWords.some(word => userMessageLower.includes(word)) && 
-               aiResponse.length > 100;
-    }
-    
-    // Create a script for the video based on AI response
-    function createVideoScript(aiResponse) {
-        // Limit script length (HeyGen usually has limits)
-        const maxLength = 1000;
-        let script = aiResponse;
-        
-        if (script.length > maxLength) {
-            // Find a good breaking point (end of sentence)
-            const breakPoint = script.substring(0, maxLength).lastIndexOf('.');
-            if (breakPoint > maxLength / 2) {
-                script = script.substring(0, breakPoint + 1);
-            } else {
-                script = script.substring(0, maxLength);
-            }
-            
-            script += " I hope this explanation helps!";
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error('HeyGen API Error:', errorText);
+            throw new Error(`Error ${response.status}: ${errorText}`);
         }
         
-        // Add a friendly intro and outro
-        return `Hi there! Let me explain this for you. ${script} Thanks for watching!`;
+        const data = await response.json();
+        
+        // Check video status and wait for completion
+        if (data.data && data.data.video_id) {
+            const videoId = data.data.video_id;
+            const videoUrl = await checkVideoStatus(videoId, heygenKey);
+            
+            // Display video when ready
+            videoContainer.innerHTML = `
+                <video controls width="100%" style="max-width: 600px;">
+                    <source src="${videoUrl}" type="video/mp4">
+                    Your browser does not support the video tag.
+                </video>
+                <button id="video-button" style="margin-top: 15px;">Generate New Video</button>
+            `;
+            
+            // Re-attach event listener to the new button
+            document.getElementById('video-button').addEventListener('click', () => {
+                videoButton.click();
+            });
+        } else {
+            throw new Error('Video ID not received from HeyGen');
+        }
+        
+    } catch (error) {
+        console.error('Error generating video:', error);
+        videoButton.disabled = false;
+        videoButton.textContent = 'Try Again';
+        videoContainer.innerHTML += `<p style="color: red;">Error: ${error.message}</p>`;
     }
-    </script>
-</body>
-</html>
+});
+
+// Check video generation status - updated to match HeyGen's v1 endpoint
+async function checkVideoStatus(videoId, apiKey) {
+    return new Promise((resolve, reject) => {
+        const maxAttempts = 60; // 5 minutes total (checking every 5 seconds)
+        let attempts = 0;
+        
+        const checkStatus = async () => {
+            try {
+                // Using the v1 endpoint from the documentation
+                const response = await fetch(`https://api.heygen.com/v1/video_status.get?video_id=${videoId}`, {
+                    headers: {
+                        'X-Api-Key': apiKey  // Updated header format
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`Failed to check video status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                console.log('Video status response:', data);  // Log the full response for debugging
+                
+                if (data.data.status === 'completed') {
+                    resolve(data.data.video_url);
+                } else if (data.data.status === 'failed') {
+                    reject(new Error(`Video generation failed: ${data.data.error || 'Unknown error'}`));
+                } else if (attempts < maxAttempts) {
+                    attempts++;
+                    // Update the button with progress
+                    videoButton.innerHTML = `<span class="loading"></span>Processing video (${attempts}/${maxAttempts})`;
+                    setTimeout(checkStatus, 5000); // Check again in 5 seconds
+                } else {
+                    reject(new Error('Video generation timed out'));
+                }
+            } catch (error) {
+                console.error('Error checking video status:', error);
+                reject(error);
+            }
+        };
+        
+        checkStatus();
+    });
+}
